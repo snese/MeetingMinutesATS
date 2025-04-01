@@ -1,0 +1,16 @@
+# MeetingMinutesATS Python Dependencies
+
+# Core dependencies
+mlx==0.0.14
+numpy>=1.20.0
+tqdm>=4.64.0
+
+# Audio processing
+soundfile>=0.12.1
+sounddevice>=0.4.6
+
+# Evaluation metrics
+jiwer>=3.0.0
+
+# Utilities
+requests>=2.28.0

@@ -1,0 +1,34 @@
+{
+  "transcription": {
+    "model": "large-v3",
+    "quant": "q4_0",
+    "language": "zh-tw",
+    "beam_size": 5,
+    "temperature": 0.2,
+    "initial_prompt": "會議語言:繁體中文70%,英文30%",
+    "chunk_size": 300
+  },
+  "post_processing": {
+    "max_segment_chars": 500,
+    "enable_speaker_segmentation": true,
+    "enable_punctuation_correction": true
+  },
+  "system": {
+    "memory_limit": 0.75,
+    "max_processes": 2,
+    "output_dir": "transcriptions",
+    "recordings_dir": "recordings",
+    "logs_dir": "logs"
+  },
+  "monitoring": {
+    "memory_threshold": 14,
+    "consecutive_threshold": 3,
+    "check_interval": 300
+  },
+  "fallback": {
+    "model": "medium-q8",
+    "beam_size": 3,
+    "chunk_size": 180,
+    "memory_limit": 0.6
+  }
+}
