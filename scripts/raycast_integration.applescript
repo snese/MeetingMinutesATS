@@ -4,13 +4,13 @@
 -- This script provides a dialog interface for recording and transcribing meetings
 
 -- Ask for recording duration
-display dialog "開始會議錄音嗎?" default answer "60" buttons {"取消", "開始"} default button "開始"
-if button returned of result is "取消" then
+set dialogResult to display dialog "開始會議錄音嗎?" default answer "60" buttons {"取消", "開始"} default button "開始"
+if button returned of dialogResult is "取消" then
     return
 end if
 
 -- Get duration from input
-set duration to text returned of result as integer
+set duration to text returned of dialogResult as integer
 
 -- Generate output filename with timestamp
 set timestamp to do shell script "date +%Y%m%d_%H%M%S"
@@ -32,15 +32,13 @@ end try
 -- Tell user recording is starting
 display notification "Recording started for " & duration & " seconds" with title "Meeting Recorder"
 
--- Start recording
-do shell script "rec " & quoted form of output_path & " trim 0 " & duration & " &"
-
--- Wait for recording to complete with a simple progress indicator
-repeat with i from 1 to duration
-    set progress_percent to i * 100 / duration
-    display notification "Progress: " & round(progress_percent) & "% (" & i & "/" & duration & " seconds)" with title "Recording in progress..."
-    delay 1
-end repeat
+-- Start recording with improved error handling
+try
+    do shell script "rec " & quoted form of output_path & " trim 0 " & duration
+on error error_message
+    display dialog "Recording failed: " & error_message buttons {"OK"} default button "OK"
+    return
+end try
 
 -- Tell user recording is complete
 display notification "Recording completed!" with title "Meeting Recorder"
@@ -52,10 +50,13 @@ if transcribe_choice is "立即轉錄" then
     display notification "Transcription started..." with title "Meeting Recorder"
     
     try
-        -- Run transcription
-        set python_path to project_path & "/.venv/bin/python"
+        -- Run transcription with improved Python path detection
+        set python_path to "/Users/$(whoami)/.pyenv/versions/whisper-env/bin/python"
         if not my file_exists(python_path) then
-            set python_path to "/Users/$(whoami)/.pyenv/versions/whisper-env/bin/python"
+            set python_path to project_path & "/.venv/bin/python"
+            if not my file_exists(python_path) then
+                set python_path to do shell script "which python3"
+            end if
         end if
         
         set transcribe_script to project_path & "/src/transcribe.py"
