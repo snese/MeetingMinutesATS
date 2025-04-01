@@ -11,12 +11,27 @@ import numpy as np
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
+# Debug information
+print("Python executable:", sys.executable)
+print("Python version:", sys.version)
+print("Python path:", sys.path)
+
 # Import MLX framework
 try:
+    print("Attempting to import mlx...")
+    import mlx
+    print(f"MLX version: {mlx.__version__}")
+    
+    print("Attempting to import mlx.core...")
     import mlx.core as mx
+    
+    print("Attempting to import mlx_whisper...")
     from mlx_whisper import load_model
-except ImportError:
-    print("Error: MLX framework not found. Please install with 'pip install mlx==0.24.1'")
+    
+    print("All imports successful!")
+except ImportError as e:
+    print(f"Error: MLX framework not found: {e}")
+    print("Please install with 'pip install mlx==0.24.1 mlx_whisper'")
     sys.exit(1)
 
 # Define constants
