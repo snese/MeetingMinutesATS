@@ -34,14 +34,26 @@ class MemoryGuard:
     """Context manager for memory management during transcription"""
     
     def __enter__(self):
-        self.start_mem = mx.metal.get_active_memory()
+        try:
+            # Try newer API (0.24.1+)
+            self.start_mem = mx.metal.get_active_memory() if hasattr(mx, 'metal') else 0
+        except:
+            self.start_mem = 0
         return self
         
     def __exit__(self, *args):
         mx.gc()
-        if mx.metal.get_active_memory() > self.start_mem * 1.2:
-            mx.metal.clear_cache()
-        print(f"Memory reclaimed, current usage: {mx.metal.get_active_memory()/1e9:.1f}GB")
+        try:
+            # Try newer API (0.24.1+)
+            if hasattr(mx, 'metal'):
+                current_mem = mx.metal.get_active_memory()
+                if current_mem > self.start_mem * 1.2:
+                    mx.metal.clear_cache()
+                print(f"Memory reclaimed, current usage: {current_mem/1e9:.1f}GB")
+            else:
+                print("Memory management not available in this MLX version")
+        except Exception as e:
+            print(f"Memory management error: {e}")
 
 
 class WhisperTranscriber:
@@ -75,7 +87,13 @@ class WhisperTranscriber:
         # Load model
         print(f"Loading model {model_name} with quantization {quant}...")
         self.model = self._load_model()
-        print(f"Model loaded successfully. Metal memory: {mx.metal.get_active_memory()/1e9:.1f}GB")
+        try:
+            if hasattr(mx, 'metal'):
+                print(f"Model loaded successfully. Metal memory: {mx.metal.get_active_memory()/1e9:.1f}GB")
+            else:
+                print("Model loaded successfully.")
+        except Exception as e:
+            print("Model loaded successfully. Memory usage reporting not available.")
     
     def _load_model(self):
         """Load the whisper model with MLX optimization"""
@@ -157,7 +175,13 @@ class WhisperTranscriber:
             self._save_incremental_result(chunks, output_path)
             
             # Log memory usage
-            print(f"Metal memory after chunk: {mx.metal.get_active_memory()/1e9:.1f}GB")
+            try:
+                if hasattr(mx, 'metal'):
+                    print(f"Metal memory after chunk: {mx.metal.get_active_memory()/1e9:.1f}GB")
+                else:
+                    print("Chunk processed successfully.")
+            except Exception as e:
+                print("Chunk processed successfully. Memory usage reporting not available.")
         
         # Combine chunks
         full_result = self._combine_chunks(chunks)
