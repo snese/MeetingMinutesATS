@@ -12,14 +12,22 @@ if ! command -v brew &> /dev/null; then
 fi
 
 # Install system dependencies
-echo "Installing pyenv, pyenv-virtualenv, and ffmpeg..."
-brew install pyenv pyenv-virtualenv ffmpeg
+echo "Installing pyenv, pyenv-virtualenv, ffmpeg, and sox..."
+brew install pyenv pyenv-virtualenv ffmpeg sox
 
 # Verify ffmpeg installation
 if [ -f "/opt/homebrew/bin/ffmpeg" ]; then
     echo "✅ FFmpeg installed successfully"
 else
     echo "❌ FFmpeg installation failed"
+    exit 1
+fi
+
+# Verify sox installation
+if [ -f "/opt/homebrew/bin/sox" ]; then
+    echo "✅ SoX installed successfully"
+else
+    echo "❌ SoX installation failed"
     exit 1
 fi
 

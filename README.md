@@ -1,223 +1,224 @@
-# MeetingMinutesATS - 會議轉錄系統
+# MeetingMinutesATS - Bilingual Meeting Transcription System
 
-MeetingMinutesATS 是一個針對 M3 Pro (18GB) 硬體優化的會議轉錄系統，使用 MLX 框架和 Whisper large-v3-q4 模型，專為繁體中文和英文混合會議設計。
+MeetingMinutesATS is a specialized transcription system optimized for Apple Silicon M3 Pro (18GB) hardware, using the MLX framework and Whisper large-v3-q4 model. It's specifically designed for transcribing meetings with mixed Chinese and English content, providing accurate transcriptions for bilingual business environments.
 
-## 系統要求
+## System Requirements
 
-- Apple Silicon Mac (M3 Pro 或同等級)
-- macOS Sonoma 或更新版本
-- 至少 18GB RAM
-- 至少 10GB 可用磁碟空間
+- Apple Silicon Mac (M3 Pro or equivalent)
+- macOS Sonoma or newer
+- At least 18GB RAM
+- At least 10GB available disk space
 
-## 主要特點
+## Key Features
 
-- **高效能轉錄**: 1.5x 即時處理速度 (60 分鐘音頻 ≤40 分鐘處理時間)
-- **高準確度**: 段落級準確率 ≥95% (人工抽檢)
-- **記憶體優化**: 峰值使用 ≤14GB (保留 4GB 給系統)
-- **混合語言支援**: 針對繁體中文(70%)和英文(30%)混合會議優化
-- **自動化整合**: 支援 Raycast 和 Folder Action 自動化
+- **High-Performance Transcription**: 1.5x real-time processing speed (60 minutes of audio ≤ 40 minutes processing time)
+- **High Accuracy**: Paragraph-level accuracy ≥ 95% (manually verified)
+- **Memory Optimization**: Peak usage ≤ 14GB (preserving 4GB for system)
+- **Mixed Language Support**: Optimized for meetings with mixed Traditional Chinese (70%) and English (30%)
+- **Bilingual Processing**: Accurately handles code-switching between languages
+- **Automation Integration**: Support for Raycast and Folder Action automation
 
-## 目錄結構
+## Directory Structure
 
 ```
 MeetingMinutesATS/
-├── src/                    # 源代碼
-│   ├── transcribe.py       # 核心轉錄模組
-│   ├── postprocess.py      # 後處理流水線
-│   └── quality_validation.py # 質量驗證系統
-├── scripts/                # 腳本
-│   ├── setup.sh            # 環境設置腳本
-│   ├── monitor_resources.sh # 資源監控腳本
-│   ├── folder_monitor.sh   # 資料夾監控腳本
-│   ├── process.sh          # 處理腳本
-│   ├── maintenance.sh      # 維護腳本
-│   └── raycast_integration.applescript # Raycast 整合
-├── models/                 # 模型文件
-├── logs/                   # 日誌文件
-├── recordings/             # 錄音文件
-├── transcriptions/         # 轉錄結果
-├── test_cases/             # 測試案例
-├── test_results/           # 測試結果
-└── config/                 # 配置文件
+├── src/                    # Source code
+│   ├── transcribe.py       # Core transcription module
+│   ├── postprocess.py      # Post-processing pipeline
+│   └── quality_validation.py # Quality validation system
+├── scripts/                # Scripts
+│   ├── setup.sh            # Environment setup script
+│   ├── monitor_resources.sh # Resource monitoring script
+│   ├── folder_monitor.sh   # Folder monitoring script
+│   ├── process.sh          # Processing script
+│   ├── maintenance.sh      # Maintenance script
+│   └── raycast_integration.applescript # Raycast integration
+├── logs/                   # Log files
+├── recordings/             # Recording files
+├── transcriptions/         # Transcription results
+├── config/                 # Configuration files
+└── requirements.txt        # Python dependencies
 ```
 
-## 安裝與設置
+## Installation & Setup
 
-### 1. 克隆儲存庫
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/yourusername/MeetingMinutesATS.git
 cd MeetingMinutesATS
 ```
 
-### 2. 運行設置腳本
+### 2. Run the Setup Script
 
 ```bash
 chmod +x scripts/setup.sh
 ./scripts/setup.sh
 ```
 
-此腳本將:
-- 安裝系統依賴 (pyenv, pyenv-virtualenv, ffmpeg)
-- 創建 Python 3.10.13 環境
-- 安裝 MLX 框架
-- 配置 Metal 加速
-- 設置記憶體限制
+This script will:
+- Install system dependencies (pyenv, pyenv-virtualenv, ffmpeg)
+- Create a Python 3.10.13 environment
+- Install the MLX framework
+- Configure Metal acceleration
+- Set memory limits
 
-### 3. 下載模型
+### 3. Download the Model
 
-設置腳本完成後，系統將自動下載 Whisper large-v3-q4 模型。如果需要手動下載:
+After the setup script completes, the system will automatically download the Whisper large-v3-q4 model. If you need to download it manually:
 
 ```bash
-mkdir -p ~/models/whisper-large-v3-mlx
-wget https://huggingface.co/mlx-community/whisper-large-v3-mlx/resolve/main/weights.npz -P ~/models/whisper-large-v3-mlx/
+mkdir -p ~/.cache/whisper-large-v3-mlx
+wget https://huggingface.co/mlx-community/whisper-large-v3-mlx/resolve/main/weights.npz -P ~/.cache/whisper-large-v3-mlx/
 ```
 
-## 使用方法
+## Usage
 
-### 方法 1: 使用 Raycast 整合
+### Method 1: Using Raycast Integration
 
-#### 選項 A: 使用 AppleScript (推薦)
+#### Option A: Using AppleScript (Recommended)
 
-1. 在 Raycast 中添加 Script Command:
-   - 打開 Raycast 偏好設置 (⌘+,)
-   - 選擇 "Extensions" 標籤
-   - 選擇 "Script Commands"
-   - 點擊 "+" 添加新腳本
-   - 選擇 "AppleScript" 作為語言
-   - 將 `scripts/raycast_integration.applescript` 的內容複製到編輯器中
-   - 命名為 "Meeting Recorder" 並保存
+1. Add a Script Command in Raycast:
+   - Open Raycast preferences (⌘+,)
+   - Select the "Extensions" tab
+   - Select "Script Commands"
+   - Click "+" to add a new script
+   - Select "AppleScript" as the language
+   - Copy the contents of `scripts/raycast_integration.applescript` into the editor
+   - Name it "Meeting Recorder" and save
 
-2. 通過 Raycast 運行腳本開始錄音和轉錄
+2. Run the script through Raycast to start recording and transcribing
 
-#### 選項 B: 使用 Python 腳本
+#### Option B: Using Python Script
 
-1. 在 Raycast 中添加 Script Command:
-   - 打開 Raycast 偏好設置 (⌘+,)
-   - 選擇 "Extensions" 標籤
-   - 選擇 "Script Commands"
-   - 點擊 "+" 添加新腳本
-   - 選擇 "Bash" 作為語言
-   - 輸入: `python3 $HOME/Documents/Projects/MeetingMinutesATS/scripts/raycast_integration.py`
-   - 命名為 "Meeting Recorder (Python)" 並保存
+1. Add a Script Command in Raycast:
+   - Open Raycast preferences (⌘+,)
+   - Select the "Extensions" tab
+   - Select "Script Commands"
+   - Click "+" to add a new script
+   - Select "Bash" as the language
+   - Enter: `python3 $HOME/Documents/Projects/MeetingMinutesATS/scripts/raycast_integration.py`
+   - Name it "Meeting Recorder (Python)" and save
 
-2. 通過 Raycast 運行腳本開始錄音和轉錄
+2. Run the script through Raycast to start recording and transcribing
 
-#### 選項 C: 直接運行腳本
+#### Option C: Running Scripts Directly
 
-如果您在 Raycast 中遇到問題，可以直接運行腳本:
+If you encounter issues with Raycast, you can run the scripts directly:
 
 ```bash
-# AppleScript 版本
+# AppleScript version
 osascript scripts/raycast_integration.applescript
 
-# Python 版本
+# Python version
 python3 scripts/raycast_integration.py
 ```
 
-### 方法 2: 使用資料夾監控
+### Method 2: Using Folder Monitoring
 
-1. 啟動資料夾監控腳本:
+1. Start the folder monitoring script:
 
 ```bash
 chmod +x scripts/folder_monitor.sh
 ./scripts/folder_monitor.sh &
 ```
 
-2. 將音頻文件放入 VoiceMemos 資料夾，系統將自動處理
+By default, the script monitors the `recordings` folder. You can also specify another folder:
 
-### 方法 3: 手動轉錄
+```bash
+./scripts/folder_monitor.sh -d /path/to/custom/folder
+```
 
-1. 激活 Python 環境:
+2. Place audio files in the monitored folder, and the system will process them automatically
+
+### Method 3: Manual Transcription
+
+1. Activate the Python environment:
 
 ```bash
 pyenv activate whisper-env
 ```
 
-2. 運行轉錄:
+2. Run transcription:
 
 ```bash
 python src/transcribe.py path/to/audio/file.m4a
 ```
 
-3. 運行後處理:
+3. Run post-processing:
 
 ```bash
-python src/postprocess.py transcriptions/file.json
+python src/postprocess.py transcriptions/file.json --md-only
 ```
 
-## 質量驗證
+## Transcription Output
 
-運行質量驗證測試:
+The system generates two main output files:
 
-```bash
-python src/quality_validation.py --test all
-```
+1. **JSON File** (`xxx.json`): Contains complete transcription data, including timestamps and metadata
+2. **Markdown File** (`xxx.transcript.md`): Text transcription with timestamp format `[HH:MM:SS - HH:MM:SS]`
 
-可用的測試類型:
-- `all`: 運行所有測試
-- `pure_chinese`: 純中文測試
-- `mixed_language`: 中英混合測試
-- `noisy`: 含背景噪音測試
+The Markdown format is specifically designed for bilingual meetings, preserving both Chinese and English content with accurate timestamps. This makes it easy to review and reference specific parts of the meeting.
 
-## 維護與監控
+## Maintenance & Monitoring
 
-啟動維護和監控腳本:
+Start the maintenance and monitoring script:
 
 ```bash
 chmod +x scripts/maintenance.sh
 ./scripts/maintenance.sh &
 ```
 
-此腳本將:
-- 監控系統記憶體使用
-- 分析日誌文件尋找錯誤
-- 在必要時進行記憶體回收
-- 在出現問題時發送警報
+This script will:
+- Monitor system memory usage
+- Analyze log files for errors
+- Perform memory reclamation when necessary
+- Send alerts when problems occur
 
-## 故障排除
+## Troubleshooting
 
-### 記憶體問題
+### Memory Issues
 
-如果遇到記憶體不足錯誤:
+If you encounter out-of-memory errors:
 
-1. 檢查 `logs/maintenance.log` 中的記憶體使用情況
-2. 調整 `MLX_GPU_MEMORY_LIMIT` 環境變數 (預設為 0.75)
-3. 使用較小的模型 (medium-q8 而非 large-v3-q4)
-4. 增加音頻分塊大小 (使用 `--chunk_size` 參數)
+1. Check memory usage in `logs/maintenance.log`
+2. Adjust the `MLX_GPU_MEMORY_LIMIT` environment variable (default is 0.75)
+3. Use a smaller model (medium-q8 instead of large-v3-q4)
+4. Increase audio chunk size (using the `--chunk_size` parameter)
 
-### 轉錄質量問題
+### Transcription Quality Issues
 
-如果轉錄質量不佳:
+If transcription quality is poor:
 
-1. 運行質量驗證測試確定問題
-2. 調整 `--beam_size` 和 `--temperature` 參數
-3. 修改初始提示以更好地匹配會議內容
-4. 確保音頻質量良好，減少背景噪音
+1. Adjust the `--beam_size` and `--temperature` parameters
+2. Modify the initial prompt to better match the meeting content
+3. Ensure good audio quality with reduced background noise
 
-### MLX 相關問題
+### MLX-Related Issues
 
-如果遇到 MLX 相關錯誤:
+If you encounter MLX-related errors:
 
-1. 確保已安裝正確版本的 MLX: `pip install mlx==0.24.1`
-2. 安裝 mlx_whisper: `pip install git+https://github.com/mlx-community/mlx-whisper.git`
-3. 運行測試腳本檢查 MLX 導入: `python test_mlx.py`
-4. 檢查 Python 環境是否正確激活: `pyenv activate whisper-env`
+1. Ensure you have the correct version of MLX installed: `pip install mlx==0.24.1`
+2. Install mlx_whisper: `pip install git+https://github.com/mlx-community/mlx-whisper.git`
+3. Run a test script to check MLX imports: `python test_mlx.py`
+4. Check if the Python environment is correctly activated: `pyenv activate whisper-env`
 
-### AppleScript 錯誤
+### AppleScript Errors
 
-如果 Raycast 整合腳本出現錯誤:
+If you encounter errors with the Raycast integration script:
 
-1. 嘗試使用 Python 版本的整合腳本: `python scripts/raycast_integration.py`
-2. 直接從命令行運行 AppleScript: `osascript scripts/raycast_integration.applescript`
-3. 檢查 SoX 是否已安裝: `brew install sox`
+1. Try using the Python version of the integration script: `python scripts/raycast_integration.py`
+2. Run the AppleScript directly from the command line: `osascript scripts/raycast_integration.applescript`
+3. Check if SoX is installed: `brew install sox`
 
-## 版本歷史
+## Version History
 
-詳細的更改記錄請參閱 [CHANGELOG.md](CHANGELOG.md)。
+See [CHANGELOG.md](CHANGELOG.md) for a detailed record of changes.
 
-## 貢獻
+## Contributing
 
-歡迎提交 Pull Requests 和 Issues!
+Pull Requests and Issues are welcome!
 
-## 授權
+## License
+
+[MIT License](LICENSE)

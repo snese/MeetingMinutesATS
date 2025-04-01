@@ -1,17 +1,14 @@
 #!/bin/bash
 # Process script for handling new audio files
-# This script is called by folder_monitor.sh when a new audio file is detected
 
 # Get the audio file path
 AUDIO_FILE="$1"
-LOG_FILE="$HOME/Documents/Projects/MeetingMinutesATS/logs/process.log"
-TRANSCRIPTIONS_DIR="$HOME/Documents/Projects/MeetingMinutesATS/transcriptions"
-RECORDINGS_DIR="$HOME/Documents/Projects/MeetingMinutesATS/recordings"
+PROJECT_DIR="$HOME/Documents/Projects/MeetingMinutesATS"
+LOG_FILE="$PROJECT_DIR/logs/process.log"
+TRANSCRIPTIONS_DIR="$PROJECT_DIR/transcriptions"
 
-# Create directories if they don't exist
+# Create log directory if it doesn't exist
 mkdir -p "$(dirname "$LOG_FILE")"
-mkdir -p "$TRANSCRIPTIONS_DIR"
-mkdir -p "$RECORDINGS_DIR"
 
 # Log function
 log() {
@@ -19,25 +16,33 @@ log() {
     echo "$1"
 }
 
-# Check if file exists and is an audio file
+# Check if file exists
 if [ ! -f "$AUDIO_FILE" ]; then
-    log "File not found: $AUDIO_FILE"
+    log "File does not exist: $AUDIO_FILE"
     exit 1
 fi
 
-# Check if it's an audio file using file command
-if ! file "$AUDIO_FILE" | grep -q "audio"; then
-    log "Not a valid audio file: $AUDIO_FILE"
+# Check file extension instead of using 'file' command
+FILE_EXT="${AUDIO_FILE##*.}"
+if [[ ! "$FILE_EXT" =~ ^(m4a|wav|mp3)$ ]]; then
+    log "Not a supported audio file extension: $FILE_EXT"
     exit 1
 fi
 
 log "Processing new audio file: $AUDIO_FILE"
 
-# Copy the file to our recordings directory
+# Copy the file to our directory (only if it's not already there)
 FILENAME=$(basename "$AUDIO_FILE")
-COPY_PATH="$RECORDINGS_DIR/$FILENAME"
-cp "$AUDIO_FILE" "$COPY_PATH"
-log "Copied to $COPY_PATH"
+COPY_PATH="$PROJECT_DIR/recordings/$FILENAME"
+
+# Only copy if the file is not already in our recordings directory
+if [[ "$AUDIO_FILE" != "$COPY_PATH" ]]; then
+    mkdir -p "$(dirname "$COPY_PATH")"
+    cp "$AUDIO_FILE" "$COPY_PATH"
+    log "Copied to $COPY_PATH"
+else
+    log "File is already in recordings directory, no need to copy"
+fi
 
 # Activate Python environment
 export PATH="$HOME/.pyenv/bin:$PATH"
@@ -45,62 +50,25 @@ eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
 pyenv activate whisper-env
 
-# Set memory limits
-export MLX_GPU_MEMORY_LIMIT=0.75
-export DYLD_LIBRARY_PATH=/opt/homebrew/lib
-
 # Run transcription
 log "Starting transcription..."
-python "$HOME/Documents/Projects/MeetingMinutesATS/src/transcribe.py" "$COPY_PATH"
+python "$PROJECT_DIR/src/transcribe.py" "$COPY_PATH"
 
 # Get the output JSON path
 BASE_NAME="${FILENAME%.*}"
 JSON_PATH="$TRANSCRIPTIONS_DIR/$BASE_NAME.json"
 
-# Check if transcription was successful
-if [ ! -f "$JSON_PATH" ]; then
-    log "Transcription failed: Output file not found at $JSON_PATH"
-    
-    # Send failure notification
-    osascript -e "display notification \"轉錄失敗: $BASE_NAME\" with title \"MeetingMinutesATS\" sound name \"Basso\""
-    exit 1
-fi
+# Run post-processing to generate Markdown transcript
+log "Generating Markdown transcript..."
+python "$PROJECT_DIR/src/postprocess.py" "$JSON_PATH" --md-only
 
-# Run post-processing
-log "Starting post-processing..."
-python "$HOME/Documents/Projects/MeetingMinutesATS/src/postprocess.py" "$JSON_PATH"
-
-# Check if post-processing was successful
-PROCESSED_PATH="${JSON_PATH%.json}.processed.txt"
-if [ ! -f "$PROCESSED_PATH" ]; then
-    log "Post-processing failed: Output file not found at $PROCESSED_PATH"
-    
-    # Send failure notification
-    osascript -e "display notification \"後處理失敗: $BASE_NAME\" with title \"MeetingMinutesATS\" sound name \"Basso\""
-    exit 1
-fi
+# Clean up any temporary files
+rm -f "$TRANSCRIPTIONS_DIR/$BASE_NAME.json.temp"
+rm -f "$TRANSCRIPTIONS_DIR/$BASE_NAME.processed.json"
+rm -f "$TRANSCRIPTIONS_DIR/$BASE_NAME.processed.txt"
+rm -f "$TRANSCRIPTIONS_DIR/$BASE_NAME.transcript.srt"
 
 log "Processing complete for $FILENAME"
-log "Transcription saved to $PROCESSED_PATH"
 
-# Send success notification
+# Send notification
 osascript -e "display notification \"轉錄完成: $BASE_NAME\" with title \"MeetingMinutesATS\" sound name \"Glass\""
-
-# Check if there are queued files to process
-QUEUE_FILE="$HOME/Documents/Projects/MeetingMinutesATS/logs/queue.txt"
-if [ -f "$QUEUE_FILE" ] && [ -s "$QUEUE_FILE" ]; then
-    # Get the next file from the queue
-    NEXT_FILE=$(head -n 1 "$QUEUE_FILE")
-    
-    # Remove the first line from the queue
-    sed -i '' '1d' "$QUEUE_FILE"
-    
-    # Process the next file if it exists
-    if [ -n "$NEXT_FILE" ] && [ -f "$NEXT_FILE" ]; then
-        log "Processing next file from queue: $NEXT_FILE"
-        "$0" "$NEXT_FILE" &
-        log "Started process $! for queued file"
-    fi
-fi
-
-exit 0
