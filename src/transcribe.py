@@ -117,6 +117,34 @@ class WhisperTranscriber:
         except Exception as e:
             print("Metal memory reporting not available.")
     
+    def _format_timestamp(self, seconds: float) -> str:
+        """Format seconds to SRT timestamp format: HH:MM:SS,mmm"""
+        hours = int(seconds // 3600)
+        seconds %= 3600
+        minutes = int(seconds // 60)
+        seconds %= 60
+        milliseconds = int((seconds - int(seconds)) * 1000)
+        return f"{hours:02d}:{minutes:02d}:{int(seconds):02d},{milliseconds:03d}"
+    
+    def _save_as_srt(self, result: Dict, output_path: str) -> None:
+        """Save transcription result as SRT subtitle file"""
+        srt_path = output_path.rsplit(".", 1)[0] + ".transcript.srt"
+        
+        with open(srt_path, "w", encoding="utf-8") as f:
+            for i, segment in enumerate(result["segments"]):
+                # SRT index (starting from 1)
+                f.write(f"{i+1}\n")
+                
+                # Timestamps
+                start_time = self._format_timestamp(segment["start"])
+                end_time = self._format_timestamp(segment["end"])
+                f.write(f"{start_time} --> {end_time}\n")
+                
+                # Text content
+                f.write(f"{segment['text'].strip()}\n\n")
+        
+        print(f"SRT subtitle file saved to {srt_path}")
+    
     def _process_audio_chunk(self, audio_path: str, start_time: float, end_time: float) -> Dict:
         """Process a chunk of audio and return the transcription"""
         chunk_file = f"temp_chunk_{int(start_time)}_{int(end_time)}.wav"
@@ -190,9 +218,12 @@ class WhisperTranscriber:
         # Combine chunks
         full_result = self._combine_chunks(chunks)
         
-        # Save final result
+        # Save final result as JSON
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(full_result, f, ensure_ascii=False, indent=2)
+        
+        # Save as SRT format
+        self._save_as_srt(full_result, output_path)
         
         end_time = time.time()
         processing_time = end_time - start_time
@@ -200,7 +231,7 @@ class WhisperTranscriber:
         
         print(f"Transcription completed in {processing_time:.2f} seconds")
         print(f"Real-time factor: {real_time_factor:.2f}x")
-        print(f"Output saved to {output_path}")
+        print(f"JSON output saved to {output_path}")
         
         return full_result
     
