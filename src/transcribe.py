@@ -16,7 +16,7 @@ try:
     import mlx.core as mx
     from mlx_whisper import load_model
 except ImportError:
-    print("Error: MLX framework not found. Please install with 'pip install mlx==0.0.14'")
+    print("Error: MLX framework not found. Please install with 'pip install mlx==0.24.1'")
     sys.exit(1)
 
 # Define constants

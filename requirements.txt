@@ -1,7 +1,7 @@
 # MeetingMinutesATS Python Dependencies
 
 # Core dependencies
-mlx==0.0.14
+mlx==0.24.1
 numpy>=1.20.0
 tqdm>=4.64.0
 
