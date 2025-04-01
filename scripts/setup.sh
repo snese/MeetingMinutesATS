@@ -73,8 +73,24 @@ echo 'export MLX_GPU_MEMORY_LIMIT=0.75' >> ~/.zshrc
 export MLX_GPU_MEMORY_LIMIT=0.75
 
 # Verify Metal version
-metal_version=$(python -c "import mlx.core as mx; print(mx.metal.get_device().name)")
-echo "Metal device: $metal_version"
+echo "Checking Metal device..."
+python -c "
+import mlx.core as mx
+try:
+    # Try newer API (0.24.1+)
+    devices = mx.devices()
+    if devices:
+        print(f'Metal device: {devices[0]}')
+    else:
+        print('No Metal devices found')
+except Exception as e:
+    try:
+        # Try older API
+        device = mx.metal.get_device()
+        print(f'Metal device: {device.name}')
+    except Exception as e2:
+        print(f'Could not detect Metal device: {e2}')
+"
 
 echo "=== Setup Complete ==="
 echo "Please restart your terminal or run 'source ~/.zshrc' to apply changes"
