@@ -20,13 +20,14 @@ print("Python path:", sys.path)
 try:
     print("Attempting to import mlx...")
     import mlx
-    print(f"MLX version: {mlx.__version__}")
+    print("MLX imported successfully")
     
     print("Attempting to import mlx.core...")
     import mlx.core as mx
     
     print("Attempting to import mlx_whisper...")
-    from mlx_whisper import load_model
+    import mlx_whisper
+    from mlx_whisper import transcribe
     
     print("All imports successful!")
 except ImportError as e:
@@ -38,12 +39,12 @@ except ImportError as e:
 MODEL_NAME = "large-v3"
 MODEL_QUANT = "q4_0"
 MODEL_PATH = os.path.expanduser("~/models/whisper-large-v3-mlx/weights.npz")
-DEFAULT_LANGUAGE = "zh-tw"
+DEFAULT_LANGUAGE = "zh"
 DEFAULT_PROMPT = "會議語言:繁體中文70%,英文30%"
 DEFAULT_BEAM_SIZE = 5
 DEFAULT_TEMPERATURE = 0.2
 DEFAULT_CHUNK_SIZE = 300  # seconds
-DEFAULT_OUTPUT_DIR = "../transcriptions"
+DEFAULT_OUTPUT_DIR = "./transcriptions"
 
 class MemoryGuard:
     """Context manager for memory management during transcription"""
@@ -51,19 +52,20 @@ class MemoryGuard:
     def __enter__(self):
         try:
             # Try newer API (0.24.1+)
-            self.start_mem = mx.metal.get_active_memory() if hasattr(mx, 'metal') else 0
+            self.start_mem = mx.get_active_memory() if hasattr(mx, 'get_active_memory') else 0
         except:
             self.start_mem = 0
         return self
         
     def __exit__(self, *args):
-        mx.gc()
+        # MLX 0.24.1 doesn't have gc() method
         try:
             # Try newer API (0.24.1+)
-            if hasattr(mx, 'metal'):
-                current_mem = mx.metal.get_active_memory()
+            if hasattr(mx, 'get_active_memory'):
+                current_mem = mx.get_active_memory()
                 if current_mem > self.start_mem * 1.2:
-                    mx.metal.clear_cache()
+                    if hasattr(mx, 'clear_cache'):
+                        mx.clear_cache()
                 print(f"Memory reclaimed, current usage: {current_mem/1e9:.1f}GB")
             else:
                 print("Memory management not available in this MLX version")
@@ -99,34 +101,21 @@ class WhisperTranscriber:
         # Create output directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
         
-        # Load model
-        print(f"Loading model {model_name} with quantization {quant}...")
-        self.model = self._load_model()
+        # Check if model file exists
+        if not os.path.exists(self.model_path):
+            print(f"Model file not found at {self.model_path}")
+            print("Downloading model...")
+            os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
+            os.system(f"wget https://huggingface.co/mlx-community/whisper-large-v3-mlx/resolve/main/weights.npz -P {os.path.dirname(self.model_path)}")
+        
+        print(f"Using model path: {self.model_path}")
         try:
             if hasattr(mx, 'metal'):
-                print(f"Model loaded successfully. Metal memory: {mx.metal.get_active_memory()/1e9:.1f}GB")
+                print(f"Metal memory before loading: {mx.metal.get_active_memory()/1e9:.1f}GB")
             else:
-                print("Model loaded successfully.")
+                print("Metal memory reporting not available.")
         except Exception as e:
-            print("Model loaded successfully. Memory usage reporting not available.")
-    
-    def _load_model(self):
-        """Load the whisper model with MLX optimization"""
-        try:
-            # Check if model file exists
-            if not os.path.exists(self.model_path):
-                print(f"Model file not found at {self.model_path}")
-                print("Downloading model...")
-                os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
-                os.system(f"wget https://huggingface.co/mlx-community/whisper-large-v3-mlx/resolve/main/weights.npz -P {os.path.dirname(self.model_path)}")
-            
-            # Load the model
-            with MemoryGuard():
-                model = load_model(self.model_name, quant=self.quant, path=self.model_path)
-            return model
-        except Exception as e:
-            print(f"Error loading model: {e}")
-            sys.exit(1)
+            print("Metal memory reporting not available.")
     
     def _process_audio_chunk(self, audio_path: str, start_time: float, end_time: float) -> Dict:
         """Process a chunk of audio and return the transcription"""
@@ -137,10 +126,10 @@ class WhisperTranscriber:
         
         # Transcribe chunk
         with MemoryGuard():
-            result = self.model.transcribe(
+            result = mlx_whisper.transcribe(
                 chunk_file,
+                path_or_hf_repo="mlx-community/whisper-large-v3-mlx",  # Use HF repo instead of local path
                 language=self.language,
-                beam_size=self.beam_size,
                 temperature=self.temperature,
                 initial_prompt=self.initial_prompt,
             )
