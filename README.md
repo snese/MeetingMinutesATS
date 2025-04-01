@@ -77,9 +77,43 @@ wget https://huggingface.co/mlx-community/whisper-large-v3-mlx/resolve/main/weig
 
 ### 方法 1: 使用 Raycast 整合
 
-1. 在 Raycast 中安裝 AppleScript 擴展
-2. 將 `scripts/raycast_integration.applescript` 添加為自定義腳本
-3. 通過 Raycast 運行腳本開始錄音和轉錄
+#### 選項 A: 使用 AppleScript (推薦)
+
+1. 在 Raycast 中添加 Script Command:
+   - 打開 Raycast 偏好設置 (⌘+,)
+   - 選擇 "Extensions" 標籤
+   - 選擇 "Script Commands"
+   - 點擊 "+" 添加新腳本
+   - 選擇 "AppleScript" 作為語言
+   - 將 `scripts/raycast_integration.applescript` 的內容複製到編輯器中
+   - 命名為 "Meeting Recorder" 並保存
+
+2. 通過 Raycast 運行腳本開始錄音和轉錄
+
+#### 選項 B: 使用 Python 腳本
+
+1. 在 Raycast 中添加 Script Command:
+   - 打開 Raycast 偏好設置 (⌘+,)
+   - 選擇 "Extensions" 標籤
+   - 選擇 "Script Commands"
+   - 點擊 "+" 添加新腳本
+   - 選擇 "Bash" 作為語言
+   - 輸入: `python3 $HOME/Documents/Projects/MeetingMinutesATS/scripts/raycast_integration.py`
+   - 命名為 "Meeting Recorder (Python)" 並保存
+
+2. 通過 Raycast 運行腳本開始錄音和轉錄
+
+#### 選項 C: 直接運行腳本
+
+如果您在 Raycast 中遇到問題，可以直接運行腳本:
+
+```bash
+# AppleScript 版本
+osascript scripts/raycast_integration.applescript
+
+# Python 版本
+python3 scripts/raycast_integration.py
+```
 
 ### 方法 2: 使用資料夾監控
 

@@ -1,91 +1,92 @@
--- Raycast Integration for MeetingMinutesATS
--- This script provides a Raycast interface for recording and transcribing meetings
+#!/usr/bin/osascript
 
-on run
-    tell application "Raycast"
-        activate
-        
-        -- Ask for recording duration
-        set input to display dialog "開始會議錄音嗎?" default answer "60" buttons {"取消", "開始"} default button "開始"
-        
-        -- Check if user canceled
-        if button returned of input is "取消" then
-            return
+-- MeetingMinutesATS Recording Script
+-- This script provides a dialog interface for recording and transcribing meetings
+
+-- Ask for recording duration
+display dialog "開始會議錄音嗎?" default answer "60" buttons {"取消", "開始"} default button "開始"
+if button returned of result is "取消" then
+    return
+end if
+
+-- Get duration from input
+set duration to text returned of result as integer
+
+-- Generate output filename with timestamp
+set timestamp to do shell script "date +%Y%m%d_%H%M%S"
+set output_file to "meeting_" & timestamp & ".wav"
+set project_path to do shell script "echo $HOME/Documents/Projects/MeetingMinutesATS"
+set output_path to project_path & "/recordings/" & output_file
+
+-- Create recordings directory if it doesn't exist
+do shell script "mkdir -p " & quoted form of (project_path & "/recordings")
+
+-- Check if SoX (for 'rec' command) is installed
+try
+    do shell script "which rec"
+on error
+    display dialog "Error: SoX audio tool is not installed. Please run 'brew install sox' and try again." buttons {"OK"} default button "OK"
+    return
+end try
+
+-- Tell user recording is starting
+display notification "Recording started for " & duration & " seconds" with title "Meeting Recorder"
+
+-- Start recording
+do shell script "rec " & quoted form of output_path & " trim 0 " & duration & " &"
+
+-- Wait for recording to complete with a simple progress indicator
+repeat with i from 1 to duration
+    set progress_percent to i * 100 / duration
+    display notification "Progress: " & round(progress_percent) & "% (" & i & "/" & duration & " seconds)" with title "Recording in progress..."
+    delay 1
+end repeat
+
+-- Tell user recording is complete
+display notification "Recording completed!" with title "Meeting Recorder"
+
+-- Ask if user wants to transcribe now
+set transcribe_choice to button returned of (display dialog "錄音已保存到 " & output_path & "。是否立即轉錄?" buttons {"稍後", "立即轉錄"} default button "立即轉錄")
+
+if transcribe_choice is "立即轉錄" then
+    display notification "Transcription started..." with title "Meeting Recorder"
+    
+    try
+        -- Run transcription
+        set python_path to project_path & "/.venv/bin/python"
+        if not my file_exists(python_path) then
+            set python_path to "/Users/$(whoami)/.pyenv/versions/whisper-env/bin/python"
         end if
         
-        -- Get duration from input
-        set duration to text returned of input as integer
+        set transcribe_script to project_path & "/src/transcribe.py"
+        do shell script quoted form of python_path & " " & quoted form of transcribe_script & " " & quoted form of output_path
         
-        -- Generate output filename with timestamp
-        set timestamp to do shell script "date +%Y%m%d_%H%M%S"
-        set output_file to "meeting_" & timestamp & ".wav"
-        set output_path to (do shell script "echo $HOME/Documents/Projects/MeetingMinutesATS/recordings") & "/" & output_file
+        -- Run post-processing
+        set base_name to do shell script "basename " & quoted form of output_path & " .wav"
+        set json_path to project_path & "/transcriptions/" & base_name & ".json"
+        set postprocess_script to project_path & "/src/postprocess.py"
+        do shell script quoted form of python_path & " " & quoted form of postprocess_script & " " & quoted form of json_path
         
-        -- Create recordings directory if it doesn't exist
-        do shell script "mkdir -p $HOME/Documents/Projects/MeetingMinutesATS/recordings"
+        -- Get output path
+        set text_output to project_path & "/transcriptions/" & base_name & ".processed.txt"
         
-        -- Display recording progress
-        set progress to display progress "錄音中..." with title "會議錄音" buttons {"停止"}
+        -- Show success and offer to open the file
+        set open_choice to button returned of (display dialog "轉錄完成！是否打開文件?" buttons {"否", "是"} default button "是")
+        if open_choice is "是" then
+            do shell script "open " & quoted form of text_output
+        end if
         
-        -- Start recording
-        try
-            -- Use rec command to record audio
-            do shell script "rec " & quoted form of output_path & " trim 0 " & duration & " &"
-            
-            -- Wait for recording to complete
-            repeat with i from 1 to duration
-                set progress completed steps to i
-                set progress description to "已錄製 " & i & " 秒，共 " & duration & " 秒"
-                delay 1
-                
-                -- Check if user clicked stop
-                if progress gave up then
-                    do shell script "pkill -f 'rec.*" & output_file & "'"
-                    exit repeat
-                end if
-            end repeat
-            
-            close progress with result "錄音完成"
-            
-            -- Ask if user wants to transcribe now
-            set transcribe_now to display dialog "錄音已保存到 " & output_path & "。是否立即轉錄?" buttons {"稍後", "立即轉錄"} default button "立即轉錄"
-            
-            if button returned of transcribe_now is "立即轉錄" then
-                -- Show transcription progress
-                set progress to display progress "轉錄進度" with title "處理中..."
-                
-                -- Run transcription
-                try
-                    set transcribe_cmd to "$HOME/.pyenv/versions/whisper-env/bin/python $HOME/Documents/Projects/MeetingMinutesATS/src/transcribe.py " & quoted form of output_path
-                    do shell script transcribe_cmd
-                    
-                    -- Run post-processing
-                    set base_name to do shell script "basename " & quoted form of output_path & " .wav"
-                    set json_path to "$HOME/Documents/Projects/MeetingMinutesATS/transcriptions/" & base_name & ".json"
-                    set postprocess_cmd to "$HOME/.pyenv/versions/whisper-env/bin/python $HOME/Documents/Projects/MeetingMinutesATS/src/postprocess.py " & json_path
-                    do shell script postprocess_cmd
-                    
-                    -- Get output path
-                    set text_output to "$HOME/Documents/Projects/MeetingMinutesATS/transcriptions/" & base_name & ".processed.txt"
-                    
-                    close progress with result "完成"
-                    
-                    -- Show success and offer to open the file
-                    set open_file to display dialog "轉錄完成！是否打開文件?" buttons {"否", "是"} default button "是"
-                    
-                    if button returned of open_file is "是" then
-                        do shell script "open " & quoted form of text_output
-                    end if
-                    
-                on error error_message
-                    close progress with result "失敗"
-                    display dialog "轉錄失敗: " & error_message buttons {"確定"} default button "確定"
-                end try
-            end if
-            
-        on error error_message
-            close progress with result "失敗"
-            display dialog "錄音失敗: " & error_message buttons {"確定"} default button "確定"
-        end try
-    end tell
-end run
+    on error error_message
+        display dialog "轉錄失敗: " & error_message buttons {"確定"} default button "確定"
+    end try
+end if
+
+-- Helper function to check if a file exists
+on file_exists(theFile)
+    try
+        do shell script "test -e " & quoted form of theFile
+        return true
+    on error
+        return false
+    end try
+end file_exists
