@@ -195,10 +195,29 @@ chmod +x scripts/maintenance.sh
 3. 修改初始提示以更好地匹配會議內容
 4. 確保音頻質量良好，減少背景噪音
 
+### MLX 相關問題
+
+如果遇到 MLX 相關錯誤:
+
+1. 確保已安裝正確版本的 MLX: `pip install mlx==0.24.1`
+2. 安裝 mlx_whisper: `pip install git+https://github.com/mlx-community/mlx-whisper.git`
+3. 運行測試腳本檢查 MLX 導入: `python test_mlx.py`
+4. 檢查 Python 環境是否正確激活: `pyenv activate whisper-env`
+
+### AppleScript 錯誤
+
+如果 Raycast 整合腳本出現錯誤:
+
+1. 嘗試使用 Python 版本的整合腳本: `python scripts/raycast_integration.py`
+2. 直接從命令行運行 AppleScript: `osascript scripts/raycast_integration.applescript`
+3. 檢查 SoX 是否已安裝: `brew install sox`
+
+## 版本歷史
+
+詳細的更改記錄請參閱 [CHANGELOG.md](CHANGELOG.md)。
+
 ## 貢獻
 
 歡迎提交 Pull Requests 和 Issues!
 
 ## 授權
-
-[MIT License](LICENSE)
